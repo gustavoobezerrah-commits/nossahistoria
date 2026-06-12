@@ -1053,7 +1053,7 @@
               <span class="time-label" id="durationTime">0:00</span>
             </div>
           </div>
-          <audio id="audioPlayer" preload="metadata"></audio>
+          <audio id="audioPlayer" preload="metadata" playsinline></audio>
         </div>
       </div>
     </section>
@@ -1142,6 +1142,10 @@
           src: "musica.mp3"
           ou por uma URL:
           src: "https://seu-site.com/musica.mp3"
+
+          Para celular, principalmente iPhone, use MP3 ou M4A direto.
+          Nao use link do YouTube, Spotify, GoogleVideo ou pagina do Drive,
+          porque esses links expiram ou sao bloqueados fora do app/site original.
 
           Se deixar vazio, a pagina toca uma melodia suave gerada pelo navegador,
           ideal para testar o player antes de colocar a musica real.
@@ -1494,6 +1498,7 @@
         selectors.audioPlayer.src = CONFIG.musica.src;
         selectors.audioPlayer.addEventListener("timeupdate", updateFileProgress);
         selectors.audioPlayer.addEventListener("loadedmetadata", updateFileProgress);
+        selectors.audioPlayer.addEventListener("error", handleMusicError);
         selectors.audioPlayer.addEventListener("ended", () => {
           selectors.playPause.innerHTML = "&#9658;";
         });
@@ -1518,8 +1523,14 @@
     async function toggleMusic() {
       if (state.audioMode === "file") {
         if (selectors.audioPlayer.paused) {
-          await selectors.audioPlayer.play();
-          selectors.playPause.innerHTML = "&#10074;&#10074;";
+          try {
+            selectors.audioPlayer.load();
+            await selectors.audioPlayer.play();
+            selectors.playPause.innerHTML = "&#10074;&#10074;";
+          } catch (error) {
+            handleMusicError();
+            playSynth();
+          }
         } else {
           selectors.audioPlayer.pause();
           selectors.playPause.innerHTML = "&#9658;";
@@ -1540,6 +1551,17 @@
       selectors.durationTime.textContent = formatTime(duration);
       selectors.currentTime.textContent = formatTime(current);
       selectors.progressFill.style.width = duration ? `${(current / duration) * 100}%` : "0%";
+    }
+
+    function handleMusicError() {
+      if (state.audioMode !== "file") return;
+      state.audioMode = "synth";
+      selectors.audioPlayer.removeAttribute("src");
+      selectors.audioPlayer.load();
+      selectors.trackArtist.textContent = "Nao consegui carregar o link da musica. Use um MP3/M4A direto.";
+      selectors.playPause.innerHTML = "&#9658;";
+      selectors.durationTime.textContent = formatTime(synth.duration);
+      updateSynthProgress();
     }
 
     function playSynth() {
